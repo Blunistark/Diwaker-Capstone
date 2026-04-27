@@ -13,51 +13,41 @@ class UltrasonicSensor:
 
     def get_distance(self):
         """
-        Returns the distance measured in cm. Includes a retry mechanism for stability.
+        Returns the distance measured in cm. Includes debug prints.
         """
-        for _ in range(3): # Try up to 3 times
-            # Ensure trig pin is low
+        for _ in range(3):
             GPIO.output(self.trig_pin, False)
-            time.sleep(0.05)
+            time.sleep(0.1)
 
-            # Send 20us pulse
             GPIO.output(self.trig_pin, True)
             time.sleep(0.00002)
             GPIO.output(self.trig_pin, False)
 
             start_time = time.time()
             stop_time = time.time()
-            timeout = start_time + 0.1
+            timeout = start_time + 1.0 # Increased to 1 second
 
             # Wait for ECHO to go HIGH
-            failed = False
             while GPIO.input(self.echo_pin) == 0:
                 start_time = time.time()
                 if start_time > timeout:
-                    failed = True
+                    print("Debug: Sensor Timeout - ECHO never went HIGH")
                     break
-
-            if failed:
-                continue # Try again
-
-            # Wait for ECHO to go LOW
-            timeout = start_time + 0.1
-            while GPIO.input(self.echo_pin) == 1:
-                stop_time = time.time()
-                if stop_time > timeout:
-                    failed = True
-                    break
-            
-            if failed:
-                continue # Try again
-
-            time_elapsed = stop_time - start_time
-            distance = (time_elapsed * 34300) / 2
-
-            if 2 <= distance <= 400:
-                return distance
+            else:
+                # Wait for ECHO to go LOW
+                timeout = start_time + 1.0
+                while GPIO.input(self.echo_pin) == 1:
+                    stop_time = time.time()
+                    if stop_time > timeout:
+                        print("Debug: Sensor Timeout - ECHO never went LOW")
+                        break
+                else:
+                    time_elapsed = stop_time - start_time
+                    distance = (time_elapsed * 34300) / 2
+                    if 2 <= distance <= 400:
+                        return distance
         
-        return -1 # Return error if all 3 attempts fail
+        return -1
 
     def get_fill_percentage(self, bin_height_cm):
         """
