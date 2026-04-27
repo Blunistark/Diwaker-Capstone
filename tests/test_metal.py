@@ -14,10 +14,9 @@ def test_metal():
     print("Testing Metal Sensor... Press Ctrl+C to stop.")
     try:
         while True:
-            if metal.is_metal():
-                print("Status: METAL DETECTED")
-            else:
-                print("Status: NO METAL")
+            raw_val = GPIO.input(metal.pin)
+            status = "METAL DETECTED" if metal.is_metal() else "NO METAL"
+            print(f"Raw Value: {raw_val} | Status: {status}")
             time.sleep(0.5)
     except KeyboardInterrupt:
         GPIO.cleanup()
