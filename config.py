@@ -9,22 +9,13 @@ PINS = {
         "IR_DETECTION": 17,       # IR Sensor for waste detection
         "MOISTURE_DIGITAL": 27,   # Moisture Sensor digital output
         "METAL_DETECTION": 22,    # Metal Sensor
-        "ULTRASONIC_WET": {
+        "ULTRASONIC": {           # Single Ultrasonic Sensor
             "TRIG": 23,
             "ECHO": 24
-        },
-        "ULTRASONIC_DRY": {
-            "TRIG": 25,
-            "ECHO": 8
-        },
-        "ULTRASONIC_METAL": {
-            "TRIG": 7,
-            "ECHO": 1
         }
     },
     "ACTUATORS": {
-        "SERVO_MAIN": 18,         # Main servo for directing waste
-        "SERVO_SECONDARY": 12     # Secondary servo if needed
+        "SERVO_MAIN": 18          # Single Servo for directing waste
     }
 }
 
@@ -39,5 +30,5 @@ IOT_CONFIG = {
 # System Thresholds
 THRESHOLDS = {
     "FILL_LEVEL_CRITICAL": 90,    # Percentage
-    "MOISTURE_LEVEL_WET": 500     # Analog value if using ADC
+    "BIN_HEIGHT_CM": 30           # Height of your bin in cm
 }

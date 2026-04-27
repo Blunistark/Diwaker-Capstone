@@ -18,11 +18,10 @@ def main():
     moisture_sensor = MoistureSensor(PINS["SENSORS"]["MOISTURE_DIGITAL"])
     metal_sensor = MetalSensor(PINS["SENSORS"]["METAL_DETECTION"])
     
-    ultrasonic_wet = UltrasonicSensor(PINS["SENSORS"]["ULTRASONIC_WET"]["TRIG"], PINS["SENSORS"]["ULTRASONIC_WET"]["ECHO"])
-    ultrasonic_dry = UltrasonicSensor(PINS["SENSORS"]["ULTRASONIC_DRY"]["TRIG"], PINS["SENSORS"]["ULTRASONIC_DRY"]["ECHO"])
-    ultrasonic_metal = UltrasonicSensor(PINS["SENSORS"]["ULTRASONIC_METAL"]["TRIG"], PINS["SENSORS"]["ULTRASONIC_METAL"]["ECHO"])
+    # Using a single ultrasonic sensor for overall monitoring
+    ultrasonic = UltrasonicSensor(PINS["SENSORS"]["ULTRASONIC"]["TRIG"], PINS["SENSORS"]["ULTRASONIC"]["ECHO"])
 
-    # Initialize Actuators
+    # Initialize Actuator
     servo = ServoMotor(PINS["ACTUATORS"]["SERVO_MAIN"])
 
     # Initialize IoT Client
@@ -33,11 +32,13 @@ def main():
 
     try:
         while True:
-            # 1. Monitoring Bin Levels
+            # 1. Monitoring Bin Level (using single sensor for demonstration)
+            current_fill = ultrasonic.get_fill_percentage(THRESHOLDS["BIN_HEIGHT_CM"])
+            
             fill_levels = {
-                "wet": ultrasonic_wet.get_fill_percentage(30), # Assuming 30cm bin height
-                "dry": ultrasonic_dry.get_fill_percentage(30),
-                "metal": ultrasonic_metal.get_fill_percentage(30)
+                "wet": current_fill, 
+                "dry": current_fill,
+                "metal": current_fill
             }
 
             # 2. Detection and Segregation Logic
@@ -49,12 +50,12 @@ def main():
                 
                 if metal_sensor.is_metal():
                     waste_type = "metal"
-                    servo.set_angle(120) # Move to metal bin
+                    servo.set_angle(120) # Move to metal position
                 elif moisture_sensor.is_wet():
                     waste_type = "wet"
-                    servo.set_angle(60) # Move to wet bin
+                    servo.set_angle(60) # Move to wet position
                 else:
-                    servo.set_angle(0) # Move to dry bin
+                    servo.set_angle(0) # Move to dry position
 
                 print(f"Classified as: {waste_type}")
                 

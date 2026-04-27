@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waste Segregation Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-wet: #3b82f6;
+            --accent-dry: #10b981;
+            --accent-metal: #f59e0b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            background: #1e293b;
+            border: 1px solid #334155;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border: 1px solid #334155;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-title {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .bin-level-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            height: 200px;
+            justify-content: space-around;
+        }
+
+        .bin {
+            width: 60px;
+            height: 100%;
+            background: #334155;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        .bin-fill {
+            width: 100%;
+            transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bin-wet .bin-fill { background: var(--accent-wet); }
+        .bin-dry .bin-fill { background: var(--accent-dry); }
+        .bin-metal .bin-fill { background: var(--accent-metal); }
+
+        .bin-label {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .last-update {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Waste Monitoring Dashboard</h1>
+        <div id="connection-status" class="status-badge">Connecting to Broker...</div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Bin Levels Card -->
+        <div class="card">
+            <div class="card-title">Real-time Bin Levels</div>
+            <div class="bin-level-container">
+                <div>
+                    <div class="bin bin-wet"><div id="wet-fill" class="bin-fill" style="height: 0%"></div></div>
+                    <div class="bin-label">WET</div>
+                </div>
+                <div>
+                    <div class="bin bin-dry"><div id="dry-fill" class="bin-fill" style="height: 0%"></div></div>
+                    <div class="bin-label">DRY</div>
+                </div>
+                <div>
+                    <div class="bin bin-metal"><div id="metal-fill" class="bin-fill" style="height: 0%"></div></div>
+                    <div class="bin-label">METAL</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Latest Detection Card -->
+        <div class="card">
+            <div class="card-title">Last Waste Detected</div>
+            <div id="last-waste" class="stat-value">Waiting...</div>
+            <div id="last-time" class="last-update">Last updated: Never</div>
+        </div>
+
+        <!-- System Logs Card -->
+        <div class="card">
+            <div class="card-title">System Health</div>
+            <div id="system-status" class="stat-value" style="color: #10b981;">Online</div>
+            <div class="last-update">Device: raspberry_pi_segregator_001</div>
+        </div>
+    </div>
+
+    <script>
+        const broker = 'wss://broker.hivemq.com:8884/mqtt';
+        const topic = 'waste_monitoring/presidency_univ/status';
+        const client = mqtt.connect(broker);
+
+        client.on('connect', () => {
+            document.getElementById('connection-status').innerText = 'Connected: HiveMQ Broker';
+            document.getElementById('connection-status').style.borderColor = '#10b981';
+            client.subscribe(topic);
+        });
+
+        client.on('message', (t, message) => {
+            const data = JSON.parse(message.toString());
+            
+            // Update Bin Levels
+            document.getElementById('wet-fill').style.height = data.bin_levels.wet + '%';
+            document.getElementById('dry-fill').style.height = data.bin_levels.dry + '%';
+            document.getElementById('metal-fill').style.height = data.bin_levels.metal + '%';
+
+            // Update Text Values
+            document.getElementById('last-waste').innerText = data.last_waste_type.toUpperCase();
+            document.getElementById('last-time').innerText = 'Last updated: ' + new Date().toLocaleTimeString();
+            
+            // Visual feedback for waste type
+            const colorMap = { 'wet': '#3b82f6', 'dry': '#10b981', 'metal': '#f59e0b' };
+            document.getElementById('last-waste').style.color = colorMap[data.last_waste_type] || '#f8fafc';
+        });
+    </script>
+</body>
+</html>
