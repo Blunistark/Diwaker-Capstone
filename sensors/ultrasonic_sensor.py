@@ -13,42 +13,51 @@ class UltrasonicSensor:
 
     def get_distance(self):
         """
-        Returns the distance measured in cm. Includes a timeout to prevent hanging.
+        Returns the distance measured in cm. Includes a retry mechanism for stability.
         """
-        # Ensure trig pin is low
-        GPIO.output(self.trig_pin, False)
-        time.sleep(0.1)
+        for _ in range(3): # Try up to 3 times
+            # Ensure trig pin is low
+            GPIO.output(self.trig_pin, False)
+            time.sleep(0.05)
 
-        # Send 10us pulse
-        GPIO.output(self.trig_pin, True)
-        time.sleep(0.00001)
-        GPIO.output(self.trig_pin, False)
+            # Send 20us pulse
+            GPIO.output(self.trig_pin, True)
+            time.sleep(0.00002)
+            GPIO.output(self.trig_pin, False)
 
-        start_time = time.time()
-        stop_time = time.time()
-        timeout = start_time + 0.1 # 100ms timeout
-
-        # Wait for ECHO to go HIGH
-        while GPIO.input(self.echo_pin) == 0:
             start_time = time.time()
-            if start_time > timeout:
-                return -1 # Timeout error
-
-        # Wait for ECHO to go LOW
-        timeout = start_time + 0.1
-        while GPIO.input(self.echo_pin) == 1:
             stop_time = time.time()
-            if stop_time > timeout:
-                return -1 # Timeout error
+            timeout = start_time + 0.1
 
-        time_elapsed = stop_time - start_time
-        distance = (time_elapsed * 34300) / 2
+            # Wait for ECHO to go HIGH
+            failed = False
+            while GPIO.input(self.echo_pin) == 0:
+                start_time = time.time()
+                if start_time > timeout:
+                    failed = True
+                    break
 
-        # Filter out unrealistic values
-        if distance > 400 or distance < 2:
-            return 0
+            if failed:
+                continue # Try again
+
+            # Wait for ECHO to go LOW
+            timeout = start_time + 0.1
+            while GPIO.input(self.echo_pin) == 1:
+                stop_time = time.time()
+                if stop_time > timeout:
+                    failed = True
+                    break
             
-        return distance
+            if failed:
+                continue # Try again
+
+            time_elapsed = stop_time - start_time
+            distance = (time_elapsed * 34300) / 2
+
+            if 2 <= distance <= 400:
+                return distance
+        
+        return -1 # Return error if all 3 attempts fail
 
     def get_fill_percentage(self, bin_height_cm):
         """
