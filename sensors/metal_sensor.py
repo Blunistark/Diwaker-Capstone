@@ -6,11 +6,12 @@ class MetalSensor:
     """
     def __init__(self, pin):
         self.pin = pin
-        GPIO.setup(self.pin, GPIO.IN)
+        # Using pull-up for 2-pin switch-type modules
+        GPIO.setup(self.pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
     def is_metal(self):
         """
         Returns True if metallic waste is detected.
         """
-        # Metal sensors typically output HIGH or LOW based on inductive sensing
-        return GPIO.input(self.pin) == GPIO.HIGH
+        # Triggers when pin is pulled to GND
+        return GPIO.input(self.pin) == GPIO.LOW
