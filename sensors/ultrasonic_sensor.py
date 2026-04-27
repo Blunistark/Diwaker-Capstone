@@ -13,25 +13,41 @@ class UltrasonicSensor:
 
     def get_distance(self):
         """
-        Returns the distance measured in cm.
+        Returns the distance measured in cm. Includes a timeout to prevent hanging.
         """
+        # Ensure trig pin is low
+        GPIO.output(self.trig_pin, False)
+        time.sleep(0.1)
+
+        # Send 10us pulse
         GPIO.output(self.trig_pin, True)
         time.sleep(0.00001)
         GPIO.output(self.trig_pin, False)
 
         start_time = time.time()
         stop_time = time.time()
+        timeout = start_time + 0.1 # 100ms timeout
 
+        # Wait for ECHO to go HIGH
         while GPIO.input(self.echo_pin) == 0:
             start_time = time.time()
+            if start_time > timeout:
+                return -1 # Timeout error
 
+        # Wait for ECHO to go LOW
+        timeout = start_time + 0.1
         while GPIO.input(self.echo_pin) == 1:
             stop_time = time.time()
+            if stop_time > timeout:
+                return -1 # Timeout error
 
         time_elapsed = stop_time - start_time
-        # Speed of sound is 34300 cm/s, distance is (time * speed) / 2
         distance = (time_elapsed * 34300) / 2
 
+        # Filter out unrealistic values
+        if distance > 400 or distance < 2:
+            return 0
+            
         return distance
 
     def get_fill_percentage(self, bin_height_cm):
