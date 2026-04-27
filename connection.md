@@ -39,6 +39,7 @@ graph TD
     %% 2-Pin Metal Sensor (Assuming Switch Mode)
     MET -- Pin 1 --> P15
     MET -- Pin 2 --> GND
+    MET -- VCC --> V3
 
     %% Ultrasonic Sensor
     ULT -- TRIG --> P16
