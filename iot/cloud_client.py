@@ -8,7 +8,11 @@ class CloudClient:
     """
     def __init__(self, config):
         self.config = config
-        self.client = mqtt.Client(self.config["CLIENT_ID"])
+        # Handle paho-mqtt 2.0 compatibility
+        try:
+            self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, self.config["CLIENT_ID"])
+        except AttributeError:
+            self.client = mqtt.Client(self.config["CLIENT_ID"])
         self.client.on_connect = self.on_connect
         self.client.on_publish = self.on_publish
 
