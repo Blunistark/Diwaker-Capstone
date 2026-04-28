@@ -23,6 +23,7 @@ def main():
 
     # Initialize Actuator
     servo = ServoMotor(PINS["ACTUATORS"]["SERVO_MAIN"])
+    servo.set_angle(90) # Start at idle/center position
 
     # Initialize IoT Client
     cloud = CloudClient(IOT_CONFIG)
@@ -50,12 +51,12 @@ def main():
                 
                 if metal_sensor.is_metal():
                     waste_type = "metal"
-                    servo.set_angle(120) # Move to metal position
+                    servo.set_angle(0) # Move to metal position (-90 relative)
                 elif moisture_sensor.is_wet():
                     waste_type = "wet"
-                    servo.set_angle(60) # Move to wet position
+                    servo.set_angle(180) # Move to wet position (+90 relative)
                 else:
-                    servo.set_angle(0) # Move to dry position
+                    servo.set_angle(90) # Move to dry/idle position (0 relative)
 
                 print(f"Classified as: {waste_type}")
                 
