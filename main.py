@@ -52,15 +52,19 @@ def main():
 
                 waste_type = "dry" # Default
                 
-                if moisture_sensor.is_wet():
-                    waste_type = "wet"
-                    servo.set_angle(180) # Move to wet position (+90 relative)
-                else:
-                    # Anything else (Metal or Dry) goes to the other bin
+                # Classification Logic: Priority to Metal, then Wet
+                if metal_sensor.is_metal():
                     waste_type = "metal_dry"
                     servo.set_angle(0) # Move to metal/dry position (-90 relative)
-
-                print(f"Classified as: {waste_type}")
+                    print("Classified as: METAL")
+                elif moisture_sensor.is_wet():
+                    waste_type = "wet"
+                    servo.set_angle(180) # Move to wet position (+90 relative)
+                    print("Classified as: WET")
+                else:
+                    waste_type = "metal_dry"
+                    servo.set_angle(0) # Move to dry position
+                    print("Classified as: DRY")
                 
                 # Update Cloud
                 cloud.publish_status(fill_levels, waste_type)
