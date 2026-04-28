@@ -48,32 +48,42 @@ def main():
                 print("Waste Detected! Classifying...")
                 # Notify dashboard immediately
                 cloud.publish_status(fill_levels, "detecting")
-                time.sleep(1) # Wait for sensors to stabilize
-
-                waste_type = "dry" # Default
                 
-                # Classification Logic: Priority to Metal, then Wet
-                if metal_sensor.is_metal():
+                # 3-Second Monitoring Window
+                start_time = time.time()
+                detected_wet = False
+                detected_metal = False
+                
+                print("Monitoring sensors for 3 seconds...")
+                while time.time() - start_time < 3:
+                    if moisture_sensor.is_wet():
+                        detected_wet = True
+                    if metal_sensor.is_metal():
+                        detected_metal = True
+                    time.sleep(0.1) # Rapid polling
+                
+                # Final Classification Logic
+                if detected_metal:
                     waste_type = "metal_dry"
-                    servo.set_angle(0) # Move to metal/dry position (-90 relative)
-                    print("Classified as: METAL")
-                elif moisture_sensor.is_wet():
+                    servo.set_angle(0) 
+                    print("Result: METAL Detected -> Moving to Metal/Dry Bin")
+                elif detected_wet:
                     waste_type = "wet"
-                    servo.set_angle(180) # Move to wet position (+90 relative)
-                    print("Classified as: WET")
+                    servo.set_angle(180)
+                    print("Result: WET Detected -> Moving to Wet Bin")
                 else:
                     waste_type = "metal_dry"
-                    servo.set_angle(0) # Move to dry position
-                    print("Classified as: DRY")
-                
-                # Update Cloud
+                    servo.set_angle(0)
+                    print("Result: No special type -> Classified as DRY")
+
+                # Update Cloud with final classification
                 cloud.publish_status(fill_levels, waste_type)
                 time.sleep(2) # Wait for waste to drop
                 servo.set_angle(90) # Return to idle position
 
             # Periodic Status Update
             cloud.publish_status(fill_levels, "none")
-            time.sleep(5)
+            time.sleep(1)
 
     except KeyboardInterrupt:
         print("System shutting down...")
