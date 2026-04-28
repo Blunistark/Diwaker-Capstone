@@ -86,30 +86,40 @@
             gap: 40px;
             height: 200px;
             justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .bin-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 200px;
         }
 
         .bin {
             width: 80px;
-            height: 100%;
+            height: 160px; /* Fixed height for the bin container */
             background: #334155;
             border-radius: 10px;
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column-reverse;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
         }
 
         .bin-fill {
             width: 100%;
-            transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
         }
 
-        .bin-wet .bin-fill { background: var(--accent-wet); }
-        .bin-metaldry .bin-fill { background: var(--accent-metaldry); }
+        .bin-wet .bin-fill { background: linear-gradient(to top, #1e40af, #3b82f6); }
+        .bin-metaldry .bin-fill { background: linear-gradient(to top, #92400e, #f59e0b); }
 
         .bin-label {
             text-align: center;
-            margin-top: 10px;
+            margin-top: 15px;
             font-size: 0.9rem;
             font-weight: 600;
             color: var(--text-secondary);
@@ -118,6 +128,7 @@
         .stat-value {
             font-size: 2.5rem;
             font-weight: 700;
+            min-height: 4rem;
         }
 
         .last-update {
@@ -138,11 +149,11 @@
         <div class="card">
             <div class="card-title">Real-time Bin Levels</div>
             <div class="bin-level-container">
-                <div>
+                <div class="bin-wrapper">
                     <div class="bin bin-wet"><div id="wet-fill" class="bin-fill" style="height: 0%"></div></div>
                     <div class="bin-label">WET</div>
                 </div>
-                <div>
+                <div class="bin-wrapper">
                     <div class="bin bin-metaldry"><div id="metaldry-fill" class="bin-fill" style="height: 0%"></div></div>
                     <div class="bin-label">METAL / DRY</div>
                 </div>
@@ -165,55 +176,34 @@
     </div>
 
     <script>
-        // Use a unique client ID to avoid collisions
         const clientId = 'web_client_' + Math.random().toString(16).substr(2, 8);
         const broker = 'wss://broker.hivemq.com:8884/mqtt';
         const topic = 'waste_monitoring/presidency_univ/status';
         
-        console.log('Connecting with Client ID:', clientId);
         const client = mqtt.connect(broker, { clientId: clientId });
-
         const statusBadge = document.getElementById('connection-status');
 
         client.on('connect', () => {
-            console.log('Connected to MQTT Broker');
             statusBadge.innerText = 'Live: Connected to Broker';
-            statusBadge.style.borderColor = '#10b981';
             statusBadge.style.color = '#10b981';
-            client.subscribe(topic, (err) => {
-                if (!err) {
-                    console.log('Subscribed to:', topic);
-                } else {
-                    console.error('Subscription error:', err);
-                }
-            });
-        });
-
-        client.on('error', (err) => {
-            console.error('MQTT Connection Error:', err);
-            statusBadge.innerText = 'Connection Error: ' + err.message;
-            statusBadge.style.color = '#ef4444';
-            statusBadge.style.borderColor = '#ef4444';
-        });
-
-        client.on('close', () => {
-            console.log('MQTT Connection Closed');
-            statusBadge.innerText = 'Disconnected';
-            statusBadge.style.color = '#94a3b8';
+            statusBadge.style.borderColor = '#10b981';
+            client.subscribe(topic);
         });
 
         client.on('message', (t, message) => {
             try {
                 const data = JSON.parse(message.toString());
-                console.log('Data received:', data);
                 
                 // Update Bin Levels
                 if (data.bin_levels) {
                     if (data.bin_levels.wet !== undefined) {
-                        document.getElementById('wet-fill').style.height = data.bin_levels.wet + '%';
+                        // Cap at 100%
+                        const wetVal = Math.min(100, Math.max(0, data.bin_levels.wet));
+                        document.getElementById('wet-fill').style.height = wetVal + '%';
                     }
                     if (data.bin_levels.metal_dry !== undefined) {
-                        document.getElementById('metaldry-fill').style.height = data.bin_levels.metal_dry + '%';
+                        const metalVal = Math.min(100, Math.max(0, data.bin_levels.metal_dry));
+                        document.getElementById('metaldry-fill').style.height = metalVal + '%';
                     }
                 }
 
@@ -222,15 +212,19 @@
                 const display = document.getElementById('last-waste');
                 
                 if (wasteType === 'detecting') {
-                    display.innerText = 'WASTE DETECTED!';
+                    display.innerText = 'DETECTING...';
                     display.style.color = '#ef4444'; // Red
+                    // Add a pulse animation for detection
+                    display.style.animation = 'pulse 1s infinite';
                 } else if (wasteType === 'none') {
                     display.innerText = 'IDLE';
                     display.style.color = '#94a3b8';
+                    display.style.animation = 'none';
                 } else {
                     display.innerText = wasteType.toUpperCase().replace('_', ' / ');
                     const colorMap = { 'wet': '#3b82f6', 'metal_dry': '#f59e0b' };
                     display.style.color = colorMap[wasteType] || '#f8fafc';
+                    display.style.animation = 'none';
                 }
                 
                 document.getElementById('last-time').innerText = 'Last updated: ' + new Date().toLocaleTimeString();
@@ -239,5 +233,12 @@
             }
         });
     </script>
+    <style>
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
 </body>
 </html>
