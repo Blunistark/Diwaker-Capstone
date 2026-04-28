@@ -12,8 +12,7 @@
             --bg-color: #0f172a;
             --card-bg: #1e293b;
             --accent-wet: #3b82f6;
-            --accent-dry: #10b981;
-            --accent-metal: #f59e0b;
+            --accent-metaldry: #f59e0b;
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
         }
@@ -83,13 +82,13 @@
         .bin-level-container {
             display: flex;
             align-items: flex-end;
-            gap: 20px;
+            gap: 40px;
             height: 200px;
-            justify-content: space-around;
+            justify-content: center;
         }
 
         .bin {
-            width: 60px;
+            width: 80px;
             height: 100%;
             background: #334155;
             border-radius: 10px;
@@ -105,13 +104,13 @@
         }
 
         .bin-wet .bin-fill { background: var(--accent-wet); }
-        .bin-dry .bin-fill { background: var(--accent-dry); }
-        .bin-metal .bin-fill { background: var(--accent-metal); }
+        .bin-metaldry .bin-fill { background: var(--accent-metaldry); }
 
         .bin-label {
             text-align: center;
             margin-top: 10px;
-            font-size: 0.8rem;
+            font-size: 0.9rem;
+            font-weight: 600;
             color: var(--text-secondary);
         }
 
@@ -143,19 +142,15 @@
                     <div class="bin-label">WET</div>
                 </div>
                 <div>
-                    <div class="bin bin-dry"><div id="dry-fill" class="bin-fill" style="height: 0%"></div></div>
-                    <div class="bin-label">DRY</div>
-                </div>
-                <div>
-                    <div class="bin bin-metal"><div id="metal-fill" class="bin-fill" style="height: 0%"></div></div>
-                    <div class="bin-label">METAL</div>
+                    <div class="bin bin-metaldry"><div id="metaldry-fill" class="bin-fill" style="height: 0%"></div></div>
+                    <div class="bin-label">METAL / DRY</div>
                 </div>
             </div>
         </div>
 
         <!-- Latest Detection Card -->
         <div class="card">
-            <div class="card-title">Last Waste Detected</div>
+            <div class="card-title">Detection Status</div>
             <div id="last-waste" class="stat-value">Waiting...</div>
             <div id="last-time" class="last-update">Last updated: Never</div>
         </div>
@@ -183,17 +178,27 @@
             const data = JSON.parse(message.toString());
             
             // Update Bin Levels
-            document.getElementById('wet-fill').style.height = data.bin_levels.wet + '%';
-            document.getElementById('dry-fill').style.height = data.bin_levels.dry + '%';
-            document.getElementById('metal-fill').style.height = data.bin_levels.metal + '%';
+            if (data.bin_levels.wet !== undefined) {
+                document.getElementById('wet-fill').style.height = data.bin_levels.wet + '%';
+            }
+            if (data.bin_levels.metal_dry !== undefined) {
+                document.getElementById('metaldry-fill').style.height = data.bin_levels.metal_dry + '%';
+            }
 
             // Update Text Values
-            document.getElementById('last-waste').innerText = data.last_waste_type.toUpperCase();
-            document.getElementById('last-time').innerText = 'Last updated: ' + new Date().toLocaleTimeString();
+            if (data.last_waste_type === 'detecting') {
+                document.getElementById('last-waste').innerText = 'WASTE DETECTED!';
+                document.getElementById('last-waste').style.color = '#ef4444'; // Red for attention
+            } else if (data.last_waste_type === 'none') {
+                document.getElementById('last-waste').innerText = 'IDLE';
+                document.getElementById('last-waste').style.color = '#94a3b8';
+            } else {
+                document.getElementById('last-waste').innerText = data.last_waste_type.toUpperCase();
+                const colorMap = { 'wet': '#3b82f6', 'metal_dry': '#f59e0b' };
+                document.getElementById('last-waste').style.color = colorMap[data.last_waste_type] || '#f8fafc';
+            }
             
-            // Visual feedback for waste type
-            const colorMap = { 'wet': '#3b82f6', 'dry': '#10b981', 'metal': '#f59e0b' };
-            document.getElementById('last-waste').style.color = colorMap[data.last_waste_type] || '#f8fafc';
+            document.getElementById('last-time').innerText = 'Last updated: ' + new Date().toLocaleTimeString();
         });
     </script>
 </body>

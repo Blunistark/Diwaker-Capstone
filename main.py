@@ -38,25 +38,25 @@ def main():
             
             fill_levels = {
                 "wet": current_fill, 
-                "dry": current_fill,
-                "metal": current_fill
+                "metal_dry": current_fill
             }
 
             # 2. Detection and Segregation Logic
             if ir_sensor.is_waste_detected():
                 print("Waste Detected! Classifying...")
+                # Notify dashboard immediately
+                cloud.publish_status(fill_levels, "detecting")
                 time.sleep(1) # Wait for sensors to stabilize
 
                 waste_type = "dry" # Default
                 
-                if metal_sensor.is_metal():
-                    waste_type = "metal"
-                    servo.set_angle(0) # Move to metal position (-90 relative)
-                elif moisture_sensor.is_wet():
+                if moisture_sensor.is_wet():
                     waste_type = "wet"
                     servo.set_angle(180) # Move to wet position (+90 relative)
                 else:
-                    servo.set_angle(90) # Move to dry/idle position (0 relative)
+                    # Anything else (Metal or Dry) goes to the other bin
+                    waste_type = "metal_dry"
+                    servo.set_angle(0) # Move to metal/dry position (-90 relative)
 
                 print(f"Classified as: {waste_type}")
                 
