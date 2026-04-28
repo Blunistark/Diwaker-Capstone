@@ -31,7 +31,7 @@ class UltrasonicSensor:
             while GPIO.input(self.echo_pin) == 0:
                 start_time = time.time()
                 if start_time > timeout:
-                    print("Debug: Sensor Timeout - ECHO never went HIGH")
+                    print(f"Debug: Sensor Timeout (Trig:{self.trig_pin} Echo:{self.echo_pin}) - ECHO never went HIGH")
                     break
             else:
                 # Wait for ECHO to go LOW
@@ -39,7 +39,7 @@ class UltrasonicSensor:
                 while GPIO.input(self.echo_pin) == 1:
                     stop_time = time.time()
                     if stop_time > timeout:
-                        print("Debug: Sensor Timeout - ECHO never went LOW")
+                        print(f"Debug: Sensor Timeout (Trig:{self.trig_pin} Echo:{self.echo_pin}) - ECHO never went LOW")
                         break
                 else:
                     time_elapsed = stop_time - start_time
