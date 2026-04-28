@@ -1,4 +1,5 @@
 import RPi.GPIO as GPIO
+import time
 
 class IRSensor:
     """
@@ -6,20 +7,35 @@ class IRSensor:
     """
     def __init__(self, pin):
         self.pin = pin
-        # Ensure pin is set to INPUT with Pull-up
-        GPIO.setup(self.pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         
-        # Clean up any existing detection to prevent "Failed to add edge detection"
+        # Aggressive cleanup for this specific pin
         try:
             GPIO.remove_event_detect(self.pin)
+            time.sleep(0.1) # Give the kernel a moment to release the pin
         except:
             pass
             
-        # Add event detection for falling edge (Object detection)
-        GPIO.add_event_detect(self.pin, GPIO.FALLING, bouncetime=200)
+        # Ensure pin is set to INPUT with Pull-up
+        GPIO.setup(self.pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        
+        # Try to add event detection
+        try:
+            GPIO.add_event_detect(self.pin, GPIO.FALLING, bouncetime=200)
+        except RuntimeError as e:
+            print(f"Warning: Falling edge detection failed ({e}). Falling back to simple polling.")
+            # We don't raise the error, so the script can still run in polling mode
 
     def is_waste_detected(self):
         """
-        Returns True if waste has been detected since the last check.
+        Returns True if waste is detected. 
+        Uses interrupt if available, otherwise falls back to direct reading.
         """
-        return GPIO.event_detected(self.pin)
+        try:
+            # Try interrupt-based detection first
+            if GPIO.event_detected(self.pin):
+                return True
+        except:
+            pass
+            
+        # Fallback: Direct real-time check (less sensitive but works if interrupt fails)
+        return GPIO.input(self.pin) == GPIO.LOW
