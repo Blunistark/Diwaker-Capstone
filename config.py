@@ -34,5 +34,5 @@ IOT_CONFIG = {
 # System Thresholds
 THRESHOLDS = {
     "FILL_LEVEL_CRITICAL": 90,    # Percentage
-    "BIN_HEIGHT_CM": 30           # Height of your bin in cm
+    "BIN_HEIGHT_CM": 16           # Height of your bin in cm (Empty bin)
 }
