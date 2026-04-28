@@ -47,6 +47,7 @@
             font-size: 0.9rem;
             background: #1e293b;
             border: 1px solid #334155;
+            transition: all 0.3s ease;
         }
 
         .dashboard-grid {
@@ -159,46 +160,83 @@
         <div class="card">
             <div class="card-title">System Health</div>
             <div id="system-status" class="stat-value" style="color: #10b981;">Online</div>
-            <div class="last-update">Device: raspberry_pi_segregator_001</div>
+            <div class="last-update" id="device-id">Device: raspberry_pi_segregator_001</div>
         </div>
     </div>
 
     <script>
+        // Use a unique client ID to avoid collisions
+        const clientId = 'web_client_' + Math.random().toString(16).substr(2, 8);
         const broker = 'wss://broker.hivemq.com:8884/mqtt';
         const topic = 'waste_monitoring/presidency_univ/status';
-        const client = mqtt.connect(broker);
+        
+        console.log('Connecting with Client ID:', clientId);
+        const client = mqtt.connect(broker, { clientId: clientId });
+
+        const statusBadge = document.getElementById('connection-status');
 
         client.on('connect', () => {
-            document.getElementById('connection-status').innerText = 'Connected: HiveMQ Broker';
-            document.getElementById('connection-status').style.borderColor = '#10b981';
-            client.subscribe(topic);
+            console.log('Connected to MQTT Broker');
+            statusBadge.innerText = 'Live: Connected to Broker';
+            statusBadge.style.borderColor = '#10b981';
+            statusBadge.style.color = '#10b981';
+            client.subscribe(topic, (err) => {
+                if (!err) {
+                    console.log('Subscribed to:', topic);
+                } else {
+                    console.error('Subscription error:', err);
+                }
+            });
+        });
+
+        client.on('error', (err) => {
+            console.error('MQTT Connection Error:', err);
+            statusBadge.innerText = 'Connection Error: ' + err.message;
+            statusBadge.style.color = '#ef4444';
+            statusBadge.style.borderColor = '#ef4444';
+        });
+
+        client.on('close', () => {
+            console.log('MQTT Connection Closed');
+            statusBadge.innerText = 'Disconnected';
+            statusBadge.style.color = '#94a3b8';
         });
 
         client.on('message', (t, message) => {
-            const data = JSON.parse(message.toString());
-            
-            // Update Bin Levels
-            if (data.bin_levels.wet !== undefined) {
-                document.getElementById('wet-fill').style.height = data.bin_levels.wet + '%';
-            }
-            if (data.bin_levels.metal_dry !== undefined) {
-                document.getElementById('metaldry-fill').style.height = data.bin_levels.metal_dry + '%';
-            }
+            try {
+                const data = JSON.parse(message.toString());
+                console.log('Data received:', data);
+                
+                // Update Bin Levels
+                if (data.bin_levels) {
+                    if (data.bin_levels.wet !== undefined) {
+                        document.getElementById('wet-fill').style.height = data.bin_levels.wet + '%';
+                    }
+                    if (data.bin_levels.metal_dry !== undefined) {
+                        document.getElementById('metaldry-fill').style.height = data.bin_levels.metal_dry + '%';
+                    }
+                }
 
-            // Update Text Values
-            if (data.last_waste_type === 'detecting') {
-                document.getElementById('last-waste').innerText = 'WASTE DETECTED!';
-                document.getElementById('last-waste').style.color = '#ef4444'; // Red for attention
-            } else if (data.last_waste_type === 'none') {
-                document.getElementById('last-waste').innerText = 'IDLE';
-                document.getElementById('last-waste').style.color = '#94a3b8';
-            } else {
-                document.getElementById('last-waste').innerText = data.last_waste_type.toUpperCase();
-                const colorMap = { 'wet': '#3b82f6', 'metal_dry': '#f59e0b' };
-                document.getElementById('last-waste').style.color = colorMap[data.last_waste_type] || '#f8fafc';
+                // Update Text Values
+                const wasteType = data.last_waste_type || 'none';
+                const display = document.getElementById('last-waste');
+                
+                if (wasteType === 'detecting') {
+                    display.innerText = 'WASTE DETECTED!';
+                    display.style.color = '#ef4444'; // Red
+                } else if (wasteType === 'none') {
+                    display.innerText = 'IDLE';
+                    display.style.color = '#94a3b8';
+                } else {
+                    display.innerText = wasteType.toUpperCase().replace('_', ' / ');
+                    const colorMap = { 'wet': '#3b82f6', 'metal_dry': '#f59e0b' };
+                    display.style.color = colorMap[wasteType] || '#f8fafc';
+                }
+                
+                document.getElementById('last-time').innerText = 'Last updated: ' + new Date().toLocaleTimeString();
+            } catch (e) {
+                console.error('Error parsing message:', e);
             }
-            
-            document.getElementById('last-time').innerText = 'Last updated: ' + new Date().toLocaleTimeString();
         });
     </script>
 </body>

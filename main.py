@@ -18,8 +18,9 @@ def main():
     moisture_sensor = MoistureSensor(PINS["SENSORS"]["MOISTURE_DIGITAL"])
     metal_sensor = MetalSensor(PINS["SENSORS"]["METAL_DETECTION"])
     
-    # Using a single ultrasonic sensor for overall monitoring
-    ultrasonic = UltrasonicSensor(PINS["SENSORS"]["ULTRASONIC"]["TRIG"], PINS["SENSORS"]["ULTRASONIC"]["ECHO"])
+    # Initialize dual ultrasonic sensors for level monitoring
+    ultrasonic_wet = UltrasonicSensor(PINS["SENSORS"]["ULTRASONIC_WET"]["TRIG"], PINS["SENSORS"]["ULTRASONIC_WET"]["ECHO"])
+    ultrasonic_metaldry = UltrasonicSensor(PINS["SENSORS"]["ULTRASONIC_METALDRY"]["TRIG"], PINS["SENSORS"]["ULTRASONIC_METALDRY"]["ECHO"])
 
     # Initialize Actuator
     servo = ServoMotor(PINS["ACTUATORS"]["SERVO_MAIN"])
@@ -33,12 +34,13 @@ def main():
 
     try:
         while True:
-            # 1. Monitoring Bin Level (using single sensor for demonstration)
-            current_fill = ultrasonic.get_fill_percentage(THRESHOLDS["BIN_HEIGHT_CM"])
+            # 1. Monitoring Bin Levels independently
+            wet_fill = ultrasonic_wet.get_fill_percentage(THRESHOLDS["BIN_HEIGHT_CM"])
+            metaldry_fill = ultrasonic_metaldry.get_fill_percentage(THRESHOLDS["BIN_HEIGHT_CM"])
             
             fill_levels = {
-                "wet": current_fill, 
-                "metal_dry": current_fill
+                "wet": wet_fill, 
+                "metal_dry": metaldry_fill
             }
 
             # 2. Detection and Segregation Logic

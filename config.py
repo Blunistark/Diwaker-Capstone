@@ -9,9 +9,13 @@ PINS = {
         "IR_DETECTION": 17,       # IR Sensor for waste detection
         "MOISTURE_DIGITAL": 27,   # Moisture Sensor digital output
         "METAL_DETECTION": 22,    # Metal Sensor
-        "ULTRASONIC": {           # Single Ultrasonic Sensor
+        "ULTRASONIC_WET": {       # Sensor for Wet bin
             "TRIG": 23,
             "ECHO": 24
+        },
+        "ULTRASONIC_METALDRY": {  # Sensor for Metal/Dry bin
+            "TRIG": 5,
+            "ECHO": 6
         }
     },
     "ACTUATORS": {
